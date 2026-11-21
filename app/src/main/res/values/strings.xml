@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Debiganj Mart</string>
+    <string name="store_tagline">Fresh Groceries &amp; Daily Needs</string>
+    <string name="store_default_address">Debiganj, Goalpokher, Uttar Dinajpur</string>
+    <string name="store_default_phone">7679100108</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="nav_shop">Shop</string>
+    <string name="nav_cart">Cart</string>
+    <string name="nav_orders">Orders</string>
+    <string name="nav_control_panel">Control Panel</string>
+    <string name="nav_store_info">Store Info</string>
+    <string name="enable_notifications">Enable Order Alerts</string>
+    <string name="checkout_secure_badge">256-bit Encrypted Checkout</string>
+</resources>

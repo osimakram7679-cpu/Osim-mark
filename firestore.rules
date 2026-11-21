@@ -1,0 +1,177 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email_verified == true && request.auth.token.email == 'osimakram90644@gmail.com') ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidProduct(data) {
+      return data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+             data.description is string && data.description.size() <= 500 &&
+             data.category is string && data.category.size() >= 1 && data.category.size() <= 50 &&
+             data.unit is string && data.unit.size() >= 1 && data.unit.size() <= 30 &&
+             (data.price is float || data.price is int) && data.price >= 0 && data.price <= 1000000 &&
+             (data.mrp is float || data.mrp is int) && data.mrp >= 0 && data.mrp <= 1000000 &&
+             data.stockCount is int && data.stockCount >= 0 && data.stockCount <= 100000 &&
+             data.available is bool &&
+             data.imageKey is string && data.imageKey.size() >= 1 && data.imageKey.size() <= 50 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidStoreSettings(data) {
+      return data.storeName is string && data.storeName.size() >= 1 && data.storeName.size() <= 80 &&
+             data.address is string && data.address.size() >= 1 && data.address.size() <= 200 &&
+             data.contactPhone is string && data.contactPhone.size() >= 7 && data.contactPhone.size() <= 20 &&
+             data.merchantUpiId is string && data.merchantUpiId.size() >= 3 && data.merchantUpiId.size() <= 100 &&
+             (data.deliveryFee is float || data.deliveryFee is int) && data.deliveryFee >= 0 && data.deliveryFee <= 5000 &&
+             (data.freeDeliveryAbove is float || data.freeDeliveryAbove is int) && data.freeDeliveryAbove >= 0 && data.freeDeliveryAbove <= 50000 &&
+             data.storeOpen is bool &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidOrder(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 100 &&
+             data.customerPhone is string && data.customerPhone.size() >= 7 && data.customerPhone.size() <= 20 &&
+             data.deliveryAddress is string && data.deliveryAddress.size() >= 3 && data.deliveryAddress.size() <= 300 &&
+             data.items is list && data.items.size() >= 1 && data.items.size() <= 50 && data.items[0] is map &&
+             (data.subtotal is float || data.subtotal is int) && data.subtotal >= 0 && data.subtotal <= 1000000 &&
+             (data.deliveryFee is float || data.deliveryFee is int) && data.deliveryFee >= 0 && data.deliveryFee <= 10000 &&
+             (data.totalAmount is float || data.totalAmount is int) && data.totalAmount >= 0 && data.totalAmount <= 1010000 &&
+             data.paymentMethod in ['UPI', 'CARD_GATEWAY', 'COD'] &&
+             data.paymentStatus in ['PAID', 'PENDING_COD', 'REFUNDED'] &&
+             data.paymentReference is string && data.paymentReference.size() >= 1 && data.paymentReference.size() <= 100 &&
+             data.status in ['PLACED', 'CONFIRMED', 'PACKED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'] &&
+             data.ownerNote is string && data.ownerNote.size() <= 200 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidOrderNotification(data) {
+      return data.orderId is string && data.orderId.size() >= 1 && data.orderId.size() <= 128 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 120 &&
+             data.message is string && data.message.size() >= 1 && data.message.size() <= 300 &&
+             data.status is string && data.status.size() >= 1 && data.status.size() <= 40 &&
+             data.seen is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /products/{productId} {
+      allow get: if isSignedIn() && isValidId(productId) && (existing().available == true || isAdmin());
+      allow list: if isSignedIn() && (resource.data.available == true || isAdmin());
+
+      allow create: if isAdmin() &&
+                       isValidId(productId) &&
+                       incoming().keys().hasAll(['name', 'description', 'category', 'unit', 'price', 'mrp', 'stockCount', 'available', 'imageKey', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['name', 'description', 'category', 'unit', 'price', 'mrp', 'stockCount', 'available', 'imageKey', 'createdAt', 'updatedAt']) &&
+                       isValidProduct(incoming());
+
+      allow update: if isAdmin() &&
+                       isValidId(productId) &&
+                       isValidProduct(incoming()) &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'category', 'unit', 'price', 'mrp', 'stockCount', 'available', 'imageKey', 'updatedAt']);
+
+      allow delete: if isAdmin() && isValidId(productId);
+    }
+
+    match /store_settings/{settingId} {
+      allow get: if isSignedIn() && settingId == 'main';
+      allow list: if false;
+
+      allow create, update: if isAdmin() &&
+                               settingId == 'main' &&
+                               incoming().keys().hasAll(['storeName', 'address', 'contactPhone', 'merchantUpiId', 'deliveryFee', 'freeDeliveryAbove', 'storeOpen', 'updatedAt']) &&
+                               incoming().keys().hasOnly(['storeName', 'address', 'contactPhone', 'merchantUpiId', 'deliveryFee', 'freeDeliveryAbove', 'storeOpen', 'updatedAt']) &&
+                               isValidStoreSettings(incoming());
+
+      allow delete: if false;
+    }
+
+    match /orders/{orderId} {
+      allow get: if isSignedIn() && isValidId(orderId) && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+                       isValidId(orderId) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().status == 'PLACED' &&
+                       incoming().ownerNote == '' &&
+                       incoming().keys().hasAll(['userId', 'customerName', 'customerPhone', 'deliveryAddress', 'items', 'subtotal', 'deliveryFee', 'totalAmount', 'paymentMethod', 'paymentStatus', 'paymentReference', 'status', 'ownerNote', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['userId', 'customerName', 'customerPhone', 'deliveryAddress', 'items', 'subtotal', 'deliveryFee', 'totalAmount', 'paymentMethod', 'paymentStatus', 'paymentReference', 'status', 'ownerNote', 'createdAt', 'updatedAt']) &&
+                       isValidOrder(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(orderId) &&
+                       isValidOrder(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'paymentStatus', 'ownerNote', 'updatedAt'])) ||
+                         (existing().userId == request.auth.uid && existing().status == 'PLACED' && incoming().status == 'CANCELLED' && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']))
+                       );
+
+      allow delete: if false;
+    }
+
+    match /admins/{adminUid} {
+      allow get: if isSignedIn() && isValidId(adminUid) && (request.auth.uid == adminUid || isAdmin());
+      allow list: if isAdmin();
+
+      allow create, update: if isAdmin() &&
+                               isValidId(adminUid) &&
+                               incoming().keys().hasAll(['email', 'addedBy', 'createdAt']) &&
+                               incoming().keys().hasOnly(['email', 'addedBy', 'createdAt']) &&
+                               incoming().email is string && incoming().email.size() <= 120 &&
+                               incoming().addedBy is string && incoming().addedBy.size() <= 128 &&
+                               incoming().createdAt is timestamp && incoming().createdAt <= request.time;
+
+      allow delete: if isAdmin() && isValidId(adminUid);
+    }
+
+    match /users/{userId}/notifications/{notificationId} {
+      allow get, list: if isSignedIn() && request.auth.uid == userId;
+
+      allow create: if isSignedIn() &&
+                       isValidId(notificationId) &&
+                       (request.auth.uid == userId || isAdmin()) &&
+                       incoming().keys().hasAll(['orderId', 'title', 'message', 'status', 'seen', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['orderId', 'title', 'message', 'status', 'seen', 'createdAt', 'updatedAt']) &&
+                       isValidOrderNotification(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(notificationId) &&
+                       request.auth.uid == userId &&
+                       isValidOrderNotification(incoming()) &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['seen', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(notificationId) && request.auth.uid == userId;
+    }
+  }
+}

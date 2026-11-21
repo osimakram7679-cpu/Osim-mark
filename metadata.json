@@ -1,0 +1,6 @@
+{
+  "name": "Debiganj Mart",
+  "description": "Online general store for Debiganj, Goalpokher, Uttar Dinajpur with product browsing, secure checkout, order status notifications, and owner control panel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

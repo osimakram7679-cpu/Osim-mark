@@ -1,0 +1,110 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "A general store product sold by Debiganj Mart.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Display name of the product." },
+        "description": { "type": "string", "description": "Short product description." },
+        "category": { "type": "string", "description": "Product category name." },
+        "unit": { "type": "string", "description": "Pack weight or unit label (e.g. 1 kg, 500 ml)." },
+        "price": { "type": "number", "description": "Selling price in INR." },
+        "mrp": { "type": "number", "description": "Maximum retail price in INR." },
+        "stockCount": { "type": "integer", "description": "Available units in store stock." },
+        "available": { "type": "boolean", "description": "Whether the product is active in the catalog." },
+        "imageKey": { "type": "string", "description": "Visual category/product image key." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on last update." }
+      },
+      "required": ["name", "description", "category", "unit", "price", "mrp", "stockCount", "available", "imageKey", "createdAt", "updatedAt"]
+    },
+    "StoreSettings": {
+      "title": "StoreSettings",
+      "description": "Store profile, address, contact phone, delivery thresholds, and merchant UPI ID.",
+      "type": "object",
+      "properties": {
+        "storeName": { "type": "string" },
+        "address": { "type": "string" },
+        "contactPhone": { "type": "string" },
+        "merchantUpiId": { "type": "string" },
+        "deliveryFee": { "type": "number" },
+        "freeDeliveryAbove": { "type": "number" },
+        "storeOpen": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["storeName", "address", "contactPhone", "merchantUpiId", "deliveryFee", "freeDeliveryAbove", "storeOpen", "updatedAt"]
+    },
+    "StoreOrder": {
+      "title": "StoreOrder",
+      "description": "A customer order placed at Debiganj Mart with payment gateway reference and live fulfillment status.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "deliveryAddress": { "type": "string" },
+        "items": { "type": "array", "description": "Line items ordered." },
+        "subtotal": { "type": "number" },
+        "deliveryFee": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "paymentMethod": { "type": "string", "enum": ["UPI", "CARD_GATEWAY", "COD"] },
+        "paymentStatus": { "type": "string", "enum": ["PAID", "PENDING_COD", "REFUNDED"] },
+        "paymentReference": { "type": "string" },
+        "status": { "type": "string", "enum": ["PLACED", "CONFIRMED", "PACKED", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED"] },
+        "ownerNote": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "customerName", "customerPhone", "deliveryAddress", "items", "subtotal", "deliveryFee", "totalAmount", "paymentMethod", "paymentStatus", "paymentReference", "status", "ownerNote", "createdAt", "updatedAt"]
+    },
+    "AdminMember": {
+      "title": "AdminMember",
+      "description": "Explicitly authorized store manager UID.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "addedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "addedBy", "createdAt"]
+    },
+    "OrderNotification": {
+      "title": "OrderNotification",
+      "description": "User-scoped order update notification entry.",
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string" },
+        "seen": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["orderId", "title", "message", "status", "seen", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Store catalog products browsable by signed-in customers and editable by the store owner."
+    },
+    "/store_settings/{settingId}": {
+      "schema": { "$ref": "#/entities/StoreSettings" },
+      "description": "Global store metadata and payment configuration at document 'main'."
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/StoreOrder" },
+      "description": "Customer orders isolated by userId with owner management access."
+    },
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminMember" },
+      "description": "Authorized store control panel admin accounts."
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/OrderNotification" },
+      "description": "Per-user order status notification feed."
+    }
+  }
+}
